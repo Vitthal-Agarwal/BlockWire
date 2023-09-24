@@ -1,0 +1,74 @@
+CapitalOne API key = http://api.nessieisreal.com/
+
+URL= http://api.nessieisreal.com/
+
+
+Initialize a node.js project in this new directory by running the following command:
+  npm init -y
+
+
+Next, we’re going to install the JavaScript SDK, the dotenv dependency, and create index.js & .env files. 
+If you’re wondering what dotenv is, it’s an NPM package that allows us to create environment variables within our project. We can reference these variables in our code so that we’re not hard-coding our account information into any of our project files. This comes in handy when we’re pushing code to a public GitHub repository and allows us to hide our sensitive information. 
+
+  npm install --save @hashgraph/sdk
+
+  npm install dotenv
+
+  touch index.js .env
+
+the command "touch index.js .env" will create a file named "index.js" and ".env"
+
+
+
+Setting up Your .env File
+
+Next, let’s create those environment variables I was talking about earlier. Click into your .env file and plug in the following code: 
+
+MY_ACCOUNT_ID=ENTER TESTNET ACCOUNT ID 
+MY_PRIVATE_KEY=DER ENCODED PRIVATE KEY
+
+Note: when you’re plugging in your Account ID and your DER Encoded Private Key, don’t leave any spaces or use any quotation marks
+
+
+
+
+
+Testing Your Environment Variables
+
+Now let’s test out those environment variables using some JavaScript. Head over to your index.js file and plug in the following code: 
+
+   //Imports the dotenv dependency and environment variables into your index.js file
+
+require("dotenv").config();
+
+   //Imports the hashgraph/sdk dependency along with some built in functionality that will be used later on in the tutorial
+
+const { Client, PrivateKey, AccountCreateTransaction, AccountBalanceQuery, Hbar, TransferTransaction } = require("@hashgraph/sdk");
+
+   //Important to note that you have to write async functions when leveraging the Hedera network
+
+async function main() {
+
+    //Grabs your Hedera testnet account ID and private key from your .env file and stores them to new variables
+
+    const myAccountId = process.env.MY_ACCOUNT_ID;
+    const myPrivateKey = process.env.MY_PRIVATE_KEY;
+
+    // If we weren't able to grab it, we should throw a new error, otherwise you should see a "Success!" message
+
+    if (!myAccountId || !myPrivateKey) {
+        throw new Error("Environment variables MY_ACCOUNT_ID and MY_PRIVATE_KEY must be present");
+    } else {
+        console.log("Success!"); 
+    }
+}
+    //Remember to invoke your function!
+
+main();
+
+
+
+
+I’ve commented out each line to help explain what everything does. Once you’ve gotten all that code into your index.js file, you can go ahead and run the program. 
+
+  node index.js
