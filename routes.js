@@ -104,4 +104,17 @@ router.get('/transactions/:accountId', async (req, res) => {
     }
 });
 
+// Fetch all customers
+router.get('/customers', async (req, res) => {
+    const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
+
+    try {
+        const response = await axios.get(customerUrl);
+        res.json(response.data);
+    } catch (error) {
+        console.error("Error fetching customers:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Error fetching customers" });
+    }
+});
+
 module.exports = router;
