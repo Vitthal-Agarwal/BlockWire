@@ -7,16 +7,17 @@ const router = express.Router();
 const apiKey = process.env.API_KEY;
 const baseUrl = `http://api.nessieisreal.com`;
 
-// Create a new customer using the Capital One API
+// Create a new customer using Capital One API
 router.post('/create-customer', async (req, res) => {
     const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
 
+    // Capture customer data sent from the frontend
     const customerData = {
-        "first_name": req.body.first_name,
-        "last_name": req.body.last_name,
+        "first_name": req.body.first_name,  // <-- Dynamic first name
+        "last_name": req.body.last_name,    // <-- Dynamic last name
         "address": {
-            "street_number": "123",
-            "street_name": "Main St",
+            "street_number": "123",         // Placeholder data
+            "street_name": "Main St",       // Placeholder data
             "city": "Somewhere",
             "state": "CA",
             "zip": "12345"
@@ -24,6 +25,7 @@ router.post('/create-customer', async (req, res) => {
     };
 
     try {
+        // Send the dynamic data to the Capital One API
         const response = await axios.post(customerUrl, customerData);
         console.log("Customer API Response:", response.data);
         const customerId = response.data.objectCreated._id;

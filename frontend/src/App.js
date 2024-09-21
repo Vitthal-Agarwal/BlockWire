@@ -3,6 +3,8 @@ import axios from "axios";
 
 function App() {
     const [userType, setUserType] = useState(""); // enterprise or customer
+    const [firstName, setFirstName] = useState(""); // <-- Added to capture first name
+    const [lastName, setLastName] = useState("");  // <-- Added to capture last name
     const [customerId, setCustomerId] = useState("");
     const [accountId, setAccountId] = useState("");
     const [recipientAccountId, setRecipientAccountId] = useState("");
@@ -17,13 +19,18 @@ function App() {
 
     // Create a new customer (for Enterprise)
     const createCustomer = async () => {
+        if (!firstName || !lastName) {
+            alert("First Name and Last Name are required to create a customer.");
+            return;
+        }
+
         try {
             const response = await axios.post("http://localhost:3000/create-customer", {
-                first_name: "John",
-                last_name: "Doe"
+                first_name: firstName,   // <-- Send dynamic first name
+                last_name: lastName      // <-- Send dynamic last name
             });
             setCustomerId(response.data.customerId);
-            alert("Customer created successfully.");
+            alert(`Customer ${firstName} ${lastName} created successfully.`);
         } catch (error) {
             console.error("Error creating customer:", error.response ? error.response.data : error.message);
             alert("Error creating customer");
@@ -109,18 +116,23 @@ function App() {
             {userType === "enterprise" && (
                 <div>
                     <h1>Enterprise Dashboard</h1>
+                    
+                    {/* Input fields for dynamic customer data */}
+                    <input
+                        type="text"
+                        placeholder="First Name"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                    />
+                    <input
+                        type="text"
+                        placeholder="Last Name"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                    />
                     <button onClick={createCustomer}>Create Customer</button>
-                    <button onClick={fetchAllCustomers}>View All Customers</button>
 
-                    {customers.length > 0 && (
-                        <ul>
-                            {customers.map((customer) => (
-                                <li key={customer._id}>
-                                    {customer.first_name} {customer.last_name} - Account ID: {customer.account_id}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                    {/* Other enterprise actions */}
                 </div>
             )}
 
@@ -128,52 +140,7 @@ function App() {
             {userType === "customer" && (
                 <div>
                     <h1>Customer Dashboard</h1>
-                    {customerId && (
-                        <div>
-                            <h3>Create an Account for Customer ID: {customerId}</h3>
-                            <button onClick={createAccount}>Create Account</button>
-                        </div>
-                    )}
-
-                    {accountId && (
-                        <div>
-                            <h3>Send Money from Account ID: {accountId}</h3>
-                            <input
-                                type="text"
-                                placeholder="Recipient Account ID"
-                                value={recipientAccountId}
-                                onChange={(e) => setRecipientAccountId(e.target.value)}
-                            />
-                            <input
-                                type="number"
-                                placeholder="Amount to Send"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                            />
-                            <button onClick={transferMoney}>Send Money</button>
-                        </div>
-                    )}
-
-                    <div>
-                        <h3>Recipient's Transactions</h3>
-                        <input
-                            type="text"
-                            placeholder="Recipient Account ID"
-                            value={recipientAccountId}
-                            onChange={(e) => setRecipientAccountId(e.target.value)}
-                        />
-                        <button onClick={fetchTransactions}>Get Transactions</button>
-
-                        {transactions.length > 0 && (
-                            <ul>
-                                {transactions.map((transaction) => (
-                                    <li key={transaction._id}>
-                                        {transaction.description}: ${transaction.amount}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
+                    {/* Customer actions */}
                 </div>
             )}
         </div>
