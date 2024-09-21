@@ -10,9 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@hashgraph/sdk": "^2.34.1",
+    "@hashgraph/sdk": "^2.51.0",
+    "axios": "^1.7.7",
     "body-parser": "^1.20.2",
-    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "mongoose": "^7.5.2"
   }

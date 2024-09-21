@@ -1,26 +1,107 @@
-const { createMockAccount } = require("./capitalOneAPI");
-const { createHederaAccount } = require("./hedera");
-const { storeUserInDB } = require("./database");
+require("dotenv").config();
+const express = require('express');
+const axios = require("axios");
 
-// Function to handle user registration
-async function registerUser(req, res) {
+const router = express.Router(); // Router for handling routes
+
+const apiKey = process.env.API_KEY;
+const baseUrl = `http://api.nessieisreal.com`;
+
+// Create a new customer
+// Create a new customer
+router.post('/create-customer', async (req, res) => {
+  const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
+
+  const customerData = {
+      "first_name": req.body.first_name,
+      "last_name": req.body.last_name,
+      "address": {
+          "street_number": "123",
+          "street_name": "Main St",
+          "city": "Somewhere",
+          "state": "CA",
+          "zip": "12345"
+      }
+  };
+
   try {
-    const mockAccount = await createMockAccount();
-    const hederaAccount = await createHederaAccount();
-
-    const connectDB = require("./db");
-    connectDB();
-
-    // Store the accounts in the database
-    await storeUserInDB(mockAccount, hederaAccount);
-
-    // Send a success response
-    res.json({ success: true, mockAccount, hederaAccount });
+      const response = await axios.post(customerUrl, customerData);
+      console.log("Customer API Response:", response.data); // Log response
+      const customerId = response.data.objectCreated._id;
+      res.json({ customerId });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+      console.error("Error creating customer:", error.response ? error.response.data : error.message); // Log error
+      res.status(500).json({ error: "Error creating customer" });
   }
-}
+});
 
-module.exports = {
-  registerUser,
-};
+// Create an account for a customer
+router.post('/create-account', async (req, res) => {
+  const { customerId } = req.body;
+  const accountUrl = `${baseUrl}/customers/${customerId}/accounts?key=${apiKey}`;
+
+  const accountData = {
+      "type": "Savings",
+      "nickname": req.body.nickname || "Savings Account",
+      "rewards": 100,
+      "balance": 1000
+  };
+
+  try {
+      const response = await axios.post(accountUrl, accountData);
+      console.log("Account API Response:", response.data); // Log response
+      const accountId = response.data.objectCreated._id;
+      res.json({ accountId });
+  } catch (error) {
+      console.error("Error creating account:", error.response ? error.response.data : error.message); // Log error
+      res.status(500).json({ error: "Error creating account" });
+  }
+});
+
+// Transfer money between accounts
+router.post('/transfer-money', async (req, res) => {
+  const { senderAccountId, recipientAccountId, amount } = req.body;
+  const transferUrl = `${baseUrl}/accounts/${senderAccountId}/transfers?key=${apiKey}`;
+  const accountUrl = `${baseUrl}/accounts/${senderAccountId}?key=${apiKey}`;  // Endpoint to get account details
+
+  try {
+      // Step 1: Fetch sender's account balance
+      const accountResponse = await axios.get(accountUrl);
+      const senderBalance = accountResponse.data.balance;
+
+      // Step 2: Check if sender has enough funds
+      if (senderBalance < amount) {
+          return res.status(400).json({ error: "Insufficient funds" });
+      }
+
+      // Step 3: Proceed with transfer if enough funds are available
+      const transferData = {
+          "medium": "balance",
+          "payee_id": recipientAccountId,
+          "amount": amount,
+          "description": "Transfer to recipient"
+      };
+
+      const response = await axios.post(transferUrl, transferData);
+      res.json({ message: "Transfer successful", transaction: response.data });
+  } catch (error) {
+      console.error("Error transferring money:", error.response ? error.response.data : error.message);
+      res.status(500).json({ error: "Error transferring money" });
+  }
+});
+
+// Fetch transactions for an account
+router.get('/transactions/:accountId', async (req, res) => {
+    const { accountId } = req.params;
+    const transactionUrl = `${baseUrl}/accounts/${accountId}/transfers?key=${apiKey}`;
+
+    try {
+        const response = await axios.get(transactionUrl);
+        res.json(response.data);
+    } catch (error) {
+        console.error("Error fetching transactions:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Error fetching transactions" });
+    }
+});
+
+module.exports = router;
