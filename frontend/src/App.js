@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import axios from "axios";
 
 function App() {
-    // State to store dynamic user input
-    const [firstName, setFirstName] = useState(""); // New state for first name
-    const [lastName, setLastName] = useState("");   // New state for last name
-    const [customerId, setCustomerId] = useState(""); // Customer ID after creation
-    const [accountId, setAccountId] = useState(""); // Account ID after creation
-    const [recipientAccountId, setRecipientAccountId] = useState(""); // Recipient's account ID for money transfer
-    const [amount, setAmount] = useState(""); // Amount for transfer
-    const [transactions, setTransactions] = useState([]); // Transaction history
+    // State management for user input
+    const [firstName, setFirstName] = useState(""); 
+    const [lastName, setLastName] = useState("");   
+    const [customerId, setCustomerId] = useState(""); 
+    const [accountId, setAccountId] = useState(""); 
+    const [recipientAccountId, setRecipientAccountId] = useState(""); 
+    const [amount, setAmount] = useState(""); 
+    const [transactions, setTransactions] = useState([]); 
 
     // Create a new customer
     const createCustomer = async () => {
@@ -40,7 +40,11 @@ function App() {
 
         try {
             const response = await axios.post("http://localhost:3000/create-account", {
-                customerId
+                customerId,
+                accountType: "Savings",
+                nickname: "My Savings Account",
+                balance: 1000,
+                rewards: 200,
             });
             setAccountId(response.data.accountId);
             alert("Account created successfully.");
@@ -50,13 +54,13 @@ function App() {
         }
     };
 
-    // Transfer money to the recipient
+    // Transfer money between accounts
     const transferMoney = async () => {
         if (!accountId || !recipientAccountId || !amount) {
             alert("Please ensure all fields are filled out.");
             return;
         }
-    
+
         try {
             const response = await axios.post("http://localhost:3000/transfer-money", {
                 senderAccountId: accountId,
@@ -66,11 +70,7 @@ function App() {
             alert(`Transferred $${amount} successfully to recipient account ${recipientAccountId}.`);
         } catch (error) {
             console.error("Error sending money:", error.response ? error.response.data : error.message);
-            if (error.response && error.response.data && error.response.data.error === "Insufficient funds") {
-                alert("Transfer failed: Insufficient funds.");
-            } else {
-                alert("Error sending money");
-            }
+            alert("Error sending money");
         }
     };
 

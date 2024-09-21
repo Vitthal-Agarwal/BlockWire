@@ -1,25 +1,25 @@
 require("dotenv").config(); // Load environment variables
 const express = require("express");
 const bodyParser = require("body-parser");
-const cors = require("cors"); // Add CORS to avoid cross-origin issues
-const routes = require("./routes"); // Import the routes from routes.js
+const cors = require("cors");
+const routes = require("./routes"); // Routes are handled separately
 
 const app = express();
 const port = 3000;
 
-// Middleware to handle JSON payloads
+// Middleware
 app.use(bodyParser.json());
-app.use(cors()); // Enable CORS for all routes
+app.use(cors()); // Enable cross-origin requests
 
-// Basic route to handle GET /
+// Default route
 app.get("/", (req, res) => {
-  res.send("Welcome to the Capital One API and Blockchain Integration!");
+  res.send("Welcome to the All-In-One Financial Platform!");
 });
 
-// Use routes from routes.js for customer, account, transaction handling
+// Use the API routes from routes.js
 app.use("/", routes);
 
-// Start the server
+// Start server
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}/`);
+  console.log(`Server running at http://localhost:${port}`);
 });
