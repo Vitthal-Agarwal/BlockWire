@@ -9,32 +9,29 @@ const baseUrl = `http://api.nessieisreal.com`;
 
 // Create a new customer using the Capital One API
 router.post('/create-customer', async (req, res) => {
-  const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
+    const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
 
-  const customerData = {
-      first_name: req.body.first_name,
-      last_name: req.body.last_name,
-      address: req.body.address || {
-          street_number: "123",
-          street_name: "Main St",
-          city: "Somewhere",
-          state: "CA",
-          zip: "12345"
-      }
-  };
+    const customerData = {
+        "first_name": req.body.first_name,
+        "last_name": req.body.last_name,
+        "address": {
+            "street_number": "123",
+            "street_name": "Main St",
+            "city": "Somewhere",
+            "state": "CA",
+            "zip": "12345"
+        }
+    };
 
-  try {
-      const response = await axios.post(customerUrl, customerData);
-      const customerId = response.data.objectCreated._id;
-
-      // Log the creation of the customer in the Hedera blockchain
-      await hederaLogger.logCustomerCreation(customerId);
-
-      res.json({ customerId });
-  } catch (error) {
-      console.error("Error creating customer:", error.response ? error.response.data : error.message);
-      res.status(500).json({ error: "Error creating customer" });
-  }
+    try {
+        const response = await axios.post(customerUrl, customerData);
+        console.log("Customer API Response:", response.data);
+        const customerId = response.data.objectCreated._id;
+        res.json({ customerId });
+    } catch (error) {
+        console.error("Error creating customer:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: error.response ? error.response.data : error.message });
+    }
 });
 
 // Create an account for a customer using the Capital One API

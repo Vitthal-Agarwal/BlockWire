@@ -2,36 +2,35 @@ import React, { useState } from "react";
 import axios from "axios";
 
 function App() {
-    // State management for user input
-    const [firstName, setFirstName] = useState(""); 
-    const [lastName, setLastName] = useState("");   
-    const [customerId, setCustomerId] = useState(""); 
-    const [accountId, setAccountId] = useState(""); 
-    const [recipientAccountId, setRecipientAccountId] = useState(""); 
-    const [amount, setAmount] = useState(""); 
-    const [transactions, setTransactions] = useState([]); 
+    const [userType, setUserType] = useState(""); // enterprise or customer
+    const [customerId, setCustomerId] = useState("");
+    const [accountId, setAccountId] = useState("");
+    const [recipientAccountId, setRecipientAccountId] = useState("");
+    const [amount, setAmount] = useState("");
+    const [transactions, setTransactions] = useState([]);
+    const [customers, setCustomers] = useState([]); // For enterprise
 
-    // Create a new customer
+    // User selection
+    const handleUserTypeSelect = (type) => {
+        setUserType(type);
+    };
+
+    // Create a new customer (for Enterprise)
     const createCustomer = async () => {
-        if (!firstName || !lastName) {
-            alert("Please enter both first name and last name.");
-            return;
-        }
-
         try {
             const response = await axios.post("http://localhost:3000/create-customer", {
-                first_name: firstName,
-                last_name: lastName,
+                first_name: "John",
+                last_name: "Doe"
             });
             setCustomerId(response.data.customerId);
-            alert(`Customer ${firstName} ${lastName} created successfully.`);
+            alert("Customer created successfully.");
         } catch (error) {
             console.error("Error creating customer:", error.response ? error.response.data : error.message);
             alert("Error creating customer");
         }
     };
 
-    // Create an account for the customer
+    // Create an account for the customer (for Customer)
     const createAccount = async () => {
         if (!customerId) {
             alert("Customer ID is required to create an account.");
@@ -40,11 +39,7 @@ function App() {
 
         try {
             const response = await axios.post("http://localhost:3000/create-account", {
-                customerId,
-                accountType: "Savings",
-                nickname: "My Savings Account",
-                balance: 1000,
-                rewards: 200,
+                customerId
             });
             setAccountId(response.data.accountId);
             alert("Account created successfully.");
@@ -54,7 +49,7 @@ function App() {
         }
     };
 
-    // Transfer money between accounts
+    // Transfer money (for Customer)
     const transferMoney = async () => {
         if (!accountId || !recipientAccountId || !amount) {
             alert("Please ensure all fields are filled out.");
@@ -62,7 +57,7 @@ function App() {
         }
 
         try {
-            const response = await axios.post("http://localhost:3000/transfer-money", {
+            await axios.post("http://localhost:3000/transfer-money", {
                 senderAccountId: accountId,
                 recipientAccountId,
                 amount: parseFloat(amount)
@@ -74,7 +69,7 @@ function App() {
         }
     };
 
-    // Fetch transactions for the recipient account
+    // Fetch transactions for customer (for Customer)
     const fetchTransactions = async () => {
         if (!recipientAccountId) {
             alert("Recipient Account ID is required to fetch transactions.");
@@ -90,77 +85,97 @@ function App() {
         }
     };
 
+    // Fetch all customers for Enterprise
+    const fetchAllCustomers = async () => {
+        try {
+            const response = await axios.get("http://localhost:3000/customers");
+            setCustomers(response.data);
+        } catch (error) {
+            console.error("Error fetching customers:", error.response ? error.response.data : error.message);
+            alert("Error fetching customers");
+        }
+    };
+
     return (
         <div className="App">
-            <h1>Capital One Financial Transactions</h1>
-
-            {/* Create a Customer Section */}
+            {/* Select User Type */}
             <div>
-                <h3>Create a New Customer</h3>
-                <input
-                    type="text"
-                    placeholder="First Name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                />
-                <input
-                    type="text"
-                    placeholder="Last Name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                />
-                <button onClick={createCustomer}>Create Customer</button>
+                <h2>Select User Type</h2>
+                <button onClick={() => handleUserTypeSelect("enterprise")}>Enterprise</button>
+                <button onClick={() => handleUserTypeSelect("customer")}>Customer</button>
             </div>
 
-            {/* Create Account Section */}
-            {customerId && (
+            {/* Enterprise Interface */}
+            {userType === "enterprise" && (
                 <div>
-                    <h3>Create an Account for Customer ID: {customerId}</h3>
-                    <button onClick={createAccount}>Create Account</button>
+                    <h1>Enterprise Dashboard</h1>
+                    <button onClick={createCustomer}>Create Customer</button>
+                    <button onClick={fetchAllCustomers}>View All Customers</button>
+
+                    {customers.length > 0 && (
+                        <ul>
+                            {customers.map((customer) => (
+                                <li key={customer._id}>
+                                    {customer.first_name} {customer.last_name} - Account ID: {customer.account_id}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
             )}
 
-            {/* Transfer Money Section */}
-            {accountId && (
+            {/* Customer Interface */}
+            {userType === "customer" && (
                 <div>
-                    <h3>Send Money from Account ID: {accountId}</h3>
-                    <input
-                        type="text"
-                        placeholder="Recipient Account ID"
-                        value={recipientAccountId}
-                        onChange={(e) => setRecipientAccountId(e.target.value)}
-                    />
-                    <input
-                        type="number"
-                        placeholder="Amount to Send"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                    />
-                    <button onClick={transferMoney}>Send Money</button>
+                    <h1>Customer Dashboard</h1>
+                    {customerId && (
+                        <div>
+                            <h3>Create an Account for Customer ID: {customerId}</h3>
+                            <button onClick={createAccount}>Create Account</button>
+                        </div>
+                    )}
+
+                    {accountId && (
+                        <div>
+                            <h3>Send Money from Account ID: {accountId}</h3>
+                            <input
+                                type="text"
+                                placeholder="Recipient Account ID"
+                                value={recipientAccountId}
+                                onChange={(e) => setRecipientAccountId(e.target.value)}
+                            />
+                            <input
+                                type="number"
+                                placeholder="Amount to Send"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                            />
+                            <button onClick={transferMoney}>Send Money</button>
+                        </div>
+                    )}
+
+                    <div>
+                        <h3>Recipient's Transactions</h3>
+                        <input
+                            type="text"
+                            placeholder="Recipient Account ID"
+                            value={recipientAccountId}
+                            onChange={(e) => setRecipientAccountId(e.target.value)}
+                        />
+                        <button onClick={fetchTransactions}>Get Transactions</button>
+
+                        {transactions.length > 0 && (
+                            <ul>
+                                {transactions.map((transaction) => (
+                                    <li key={transaction._id}>
+                                        {transaction.description}: ${transaction.amount}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
                 </div>
             )}
-
-            {/* Fetch Transactions Section */}
-            <div>
-                <h3>Recipient's Transactions</h3>
-                <input
-                    type="text"
-                    placeholder="Recipient Account ID"
-                    value={recipientAccountId}
-                    onChange={(e) => setRecipientAccountId(e.target.value)}
-                />
-                <button onClick={fetchTransactions}>Get Transactions</button>
-
-                {transactions.length > 0 && (
-                    <ul>
-                        {transactions.map((transaction) => (
-                            <li key={transaction._id}>
-                                {transaction.description}: ${transaction.amount}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
         </div>
     );
 }
