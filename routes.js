@@ -1,10 +1,8 @@
 require("dotenv").config();
-
 const express = require('express');
 const axios = require("axios");
 
-const router = express.Router(); // Router for handling routes
-
+const router = express.Router();
 const apiKey = process.env.API_KEY;
 const baseUrl = `http://api.nessieisreal.com`;
 
@@ -25,60 +23,94 @@ router.post('/create-customer', async (req, res) => {
 
   try {
     const response = await axios.post(customerUrl, customerData);
-    console.log("Customer API Response:", response.data); // Log response
-    const customerId = response.data.objectCreated._id;
-    res.json({ customerId });
+    console.log("Customer API Response:", response.data); 
+    if (response.data && response.data.objectCreated) {
+      const customerId = response.data.objectCreated._id;
+      res.json({ customerId });
+    } else {
+      throw new Error("Unexpected response format");
+    }
   } catch (error) {
-    console.error("Error creating customer:", error.response ? error.response.data : error.message); // Log error
+    console.error("Error creating customer:", error.response ? error.response.data : error.message);
     res.status(500).json({ error: "Error creating customer" });
   }
 });
 
-// Create an account for a customer
-router.post('/create-account', async (req, res) => {
-  const { customerId } = req.body;
-  const accountUrl = `${baseUrl}/customers/${customerId}/accounts?key=${apiKey}`;
-  const accountData = {
-    "type": "Savings",
-    "nickname": req.body.nickname || "Savings Account",
-    "rewards": 100,
-    "balance": 1000
+// Function to create an account for a customer
+async function createAccountForCustomer(customerId, accountData) {
+  const url = `${baseUrl}/customers/${customerId}/accounts?key=${apiKey}`;
+  const payload = {
+    type: accountData.type,
+    nickname: accountData.nickname,
+    rewards: accountData.rewards || 0,
+    balance: accountData.balance || 0,
   };
 
   try {
-    const response = await axios.post(accountUrl, accountData);
-    console.log("Account API Response:", response.data); // Log response
-    const accountId = response.data.objectCreated._id;
-    res.json({ accountId });
+    const response = await axios.post(url, payload, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+
+    if (response.status >= 200 && response.status < 300) {
+      console.log("Account API Response Data:", response.data);
+      return response.data;
+    } else {
+      throw new Error("Account creation failed with status " + response.status);
+    }
   } catch (error) {
-    console.error("Error creating account:", error.response ? error.response.data : error.message); // Log error
-    res.status(500).json({ error: "Error creating account" });
+    console.error("Error creating account:", error.response ? error.response.data : error.message);
+    throw new Error("Error creating account");
   }
-});
+}
+
+// Create an account for a customer route
+router.post('/create-account', async (req, res) => {
+    const { customerId, type, nickname, balance, rewards } = req.body;
+  
+    if (!customerId || !type || !nickname) {
+      return res.status(400).json({ error: "Customer ID, type, and nickname are required to create an account." });
+    }
+  
+    const accountData = { type, nickname, balance: parseFloat(balance), rewards: parseFloat(rewards) };
+  
+    try {
+      const response = await createAccountForCustomer(customerId, accountData);
+  
+      // Based on the response structure, adjust the way you access accountId
+      const accountId = response?.objectCreated?._id || response?.account?.id; // Adjust based on actual response structure
+      if (!accountId) {
+        throw new Error("Account ID is undefined in the API response");
+      }
+  
+      res.json({ accountId });
+    } catch (error) {
+      console.error("Error creating account:", error.response ? error.response.data : error.message);
+      res.status(500).json({ error: "Error creating account" });
+    }
+  });
 
 // Transfer money between accounts
 router.post('/transfer-money', async (req, res) => {
   const { senderAccountId, recipientAccountId, amount } = req.body;
 
-  // Validate input
   if (!senderAccountId || !recipientAccountId || !amount || amount <= 0) {
     return res.status(400).json({ error: "Invalid input. Please provide valid senderAccountId, recipientAccountId, and a positive amount." });
   }
 
   const transferUrl = `${baseUrl}/accounts/${senderAccountId}/transfers?key=${apiKey}`;
-  const accountUrl = `${baseUrl}/accounts/${senderAccountId}?key=${apiKey}`; // Endpoint to get account details
+  const accountUrl = `${baseUrl}/accounts/${senderAccountId}?key=${apiKey}`;
 
   try {
-    // Step 1: Fetch sender's account balance
     const accountResponse = await axios.get(accountUrl);
     const senderBalance = accountResponse.data.balance;
 
-    // Step 2: Check if sender has enough funds
     if (senderBalance < amount) {
       return res.status(400).json({ error: "Insufficient funds" });
     }
 
-    // Step 3: Proceed with transfer if enough funds are available
     const transferData = {
       "medium": "balance",
       "payee_id": recipientAccountId,
@@ -87,7 +119,7 @@ router.post('/transfer-money', async (req, res) => {
     };
 
     const response = await axios.post(transferUrl, transferData);
-    console.log("Transfer API Response:", response.data); // Log response
+    console.log("Transfer API Response:", response.data);
 
     res.json({ message: "Transfer successful", transaction: response.data });
   } catch (error) {

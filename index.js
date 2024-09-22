@@ -37,7 +37,6 @@ const createCustomer = async (req, res) => {
 // Create an account for a customer
 const createAccount = async (req, res) => {
     const { customerId } = req.body;
-    const accountUrl = `${baseUrl}/customers/${customerId}/accounts?key=${apiKey}`;
 
     const accountData = {
         "type": "Savings",

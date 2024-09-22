@@ -2,17 +2,22 @@ import React, { useState } from "react";
 import axios from "axios";
 
 function App() {
-  // State to store dynamic user input
-  const [firstName, setFirstName] = useState(""); // New state for first name
-  const [lastName, setLastName] = useState(""); // New state for last name
-  const [customerId, setCustomerId] = useState(""); // Customer ID after creation
-  const [accountId, setAccountId] = useState(""); // Account ID after creation
-  const [recipientAccountId, setRecipientAccountId] = useState(""); // Recipient's account ID for money transfer
-  const [amount, setAmount] = useState(""); // Amount for transfer
-  const [transactions, setTransactions] = useState([]); // Transaction history
-  const [balance, setBalance] = useState(null); // Account balance
-  const [loading, setLoading] = useState(false); // Loading state
-  const [error, setError] = useState(""); // Error message
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [recipientAccountId, setRecipientAccountId] = useState("");
+  const [transferAmount, setTransferAmount] = useState(""); // Fixed reference here
+  const [transactions, setTransactions] = useState([]);
+  const [balance, setBalance] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  
+  // Additional states for account creation
+  const [type, setType] = useState(""); 
+  const [nickname, setNickname] = useState(""); 
+  const [balanceInput, setBalanceInput] = useState(""); 
+  const [rewards, setRewards] = useState(""); 
 
   // Create a new customer
   const createCustomer = async () => {
@@ -39,15 +44,20 @@ function App() {
 
   // Create an account for the customer
   const createAccount = async () => {
-    if (!customerId) {
-      alert("Customer ID is required to create an account.");
+    if (!customerId || !type || !nickname) {
+      alert("Customer ID, Account Type, and Nickname are required.");
       return;
     }
     setLoading(true);
     setError("");
+    
     try {
       const response = await axios.post("http://localhost:3000/create-account", {
         customerId,
+        type,
+        nickname,
+        balance: balanceInput,
+        rewards
       });
       setAccountId(response.data.accountId);
       alert("Account created successfully.");
@@ -58,10 +68,10 @@ function App() {
     }
     setLoading(false);
   };
-
+  
   // Transfer money to the recipient
   const transferMoney = async () => {
-    if (!accountId || !recipientAccountId || !amount || amount <= 0) {
+    if (!accountId || !recipientAccountId || !transferAmount || transferAmount <= 0) {
       alert("Please ensure all fields are filled out with valid data.");
       return;
     }
@@ -71,20 +81,13 @@ function App() {
       const response = await axios.post("http://localhost:3000/transfer-money", {
         senderAccountId: accountId,
         recipientAccountId,
-        amount: parseFloat(amount),
+        amount: parseFloat(transferAmount),
       });
-      alert(`Transferred $${amount} successfully to recipient account ${recipientAccountId}.`);
-      // Fetch updated transactions
+      alert(`Transferred $${transferAmount} successfully to recipient account ${recipientAccountId}.`);
       fetchTransactions();
-      // Optionally, fetch updated balance
       fetchBalance(accountId);
     } catch (error) {
       console.error("Error sending money:", error.response ? error.response.data : error.message);
-      if (error.response && error.response.data && error.response.data.error === "Insufficient funds") {
-        alert("Transfer failed: Insufficient funds.");
-      } else {
-        alert("Error sending money");
-      }
       setError("Error sending money");
     }
     setLoading(false);
@@ -160,7 +163,35 @@ function App() {
           placeholder="Customer ID"
           value={customerId}
           onChange={(e) => setCustomerId(e.target.value)}
-          style={{ marginRight: "10px", width: "60%" }}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
+        />
+        <input
+          type="text"
+          placeholder="Account Type (e.g., Savings, Checking)"
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
+        />
+        <input
+          type="text"
+          placeholder="Nickname"
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
+        />
+        <input
+          type="number"
+          placeholder="Balance (optional)"
+          value={balanceInput}
+          onChange={(e) => setBalanceInput(e.target.value)}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
+        />
+        <input
+          type="number"
+          placeholder="Rewards (optional)"
+          value={rewards}
+          onChange={(e) => setRewards(e.target.value)}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
         />
         <button onClick={createAccount} disabled={loading}>
           {loading ? "Creating..." : "Create Account"}
@@ -186,8 +217,8 @@ function App() {
         <input
           type="number"
           placeholder="Amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          value={transferAmount}
+          onChange={(e) => setTransferAmount(e.target.value)}
           style={{ marginBottom: "10px", display: "block", width: "100%" }}
         />
         <button onClick={transferMoney} disabled={loading}>
