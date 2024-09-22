@@ -8,33 +8,36 @@ const baseUrl = `http://api.nessieisreal.com`;
 
 // Create a new customer
 router.post('/create-customer', async (req, res) => {
-  const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
-  const customerData = {
-    "first_name": req.body.first_name,
-    "last_name": req.body.last_name,
-    "address": {
-      "street_number": "123",
-      "street_name": "Main St",
-      "city": "Somewhere",
-      "state": "CA",
-      "zip": "12345"
+    const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
+  
+    // Customer data as per the documentation you shared
+    const customerData = {
+      "first_name": req.body.first_name,
+      "last_name": req.body.last_name,
+      "address": {
+        "street_number": req.body.street_number,
+        "street_name": req.body.street_name,
+        "city": req.body.city,
+        "state": req.body.state,
+        "zip": req.body.zip
+      }
+    };
+  
+    try {
+      const response = await axios.post(customerUrl, customerData);
+      console.log("Customer API Response:", response.data); // Log response
+  
+      if (response.data && response.data.objectCreated) {
+        const customerId = response.data.objectCreated._id;
+        res.json({ customerId });
+      } else {
+        throw new Error("Unexpected response format");
+      }
+    } catch (error) {
+      console.error("Error creating customer:", error.response ? error.response.data : error.message);
+      res.status(500).json({ error: "Error creating customer" });
     }
-  };
-
-  try {
-    const response = await axios.post(customerUrl, customerData);
-    console.log("Customer API Response:", response.data); 
-    if (response.data && response.data.objectCreated) {
-      const customerId = response.data.objectCreated._id;
-      res.json({ customerId });
-    } else {
-      throw new Error("Unexpected response format");
-    }
-  } catch (error) {
-    console.error("Error creating customer:", error.response ? error.response.data : error.message);
-    res.status(500).json({ error: "Error creating customer" });
-  }
-});
+  });
 
 // Function to create an account for a customer
 async function createAccountForCustomer(customerId, accountData) {
@@ -80,7 +83,7 @@ router.post('/create-account', async (req, res) => {
       const response = await createAccountForCustomer(customerId, accountData);
   
       // Based on the response structure, adjust the way you access accountId
-      const accountId = response?.objectCreated?._id || response?.account?.id; // Adjust based on actual response structure
+      const accountId = response?.objectCreated?._id || response?.account?.id || response?.accountId; // Adjust based on actual response structure
       if (!accountId) {
         throw new Error("Account ID is undefined in the API response");
       }

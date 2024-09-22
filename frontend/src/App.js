@@ -4,6 +4,12 @@ import axios from "axios";
 function App() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [streetNumber, setStreetNumber] = useState(""); // New state for street number
+  const [streetName, setStreetName] = useState("");     // New state for street name
+  const [city, setCity] = useState("");                 // New state for city
+  const [state, setState] = useState("");               // New state for state
+  const [zip, setZip] = useState("");                   // New state for zip code
+
   const [customerId, setCustomerId] = useState("");
   const [accountId, setAccountId] = useState("");
   const [recipientAccountId, setRecipientAccountId] = useState("");
@@ -21,8 +27,8 @@ function App() {
 
   // Create a new customer
   const createCustomer = async () => {
-    if (!firstName || !lastName) {
-      alert("Please enter both first name and last name.");
+    if (!firstName || !lastName || !streetNumber || !streetName || !city || !state || !zip) {
+      alert("Please enter all required fields.");
       return;
     }
     setLoading(true);
@@ -31,6 +37,11 @@ function App() {
       const response = await axios.post("http://localhost:3000/create-customer", {
         first_name: firstName,
         last_name: lastName,
+        street_number: streetNumber,
+        street_name: streetName,
+        city: city,
+        state: state,
+        zip: zip,
       });
       setCustomerId(response.data.customerId);
       alert(`Customer ${firstName} ${lastName} created successfully.`);
@@ -138,23 +149,58 @@ function App() {
       <section style={{ marginBottom: "20px" }}>
         <h2>Create Customer</h2>
         <input
-          type="text"
-          placeholder="First Name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          style={{ marginRight: "10px", width: "45%" }}
+            type="text"
+            placeholder="First Name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            style={{ marginRight: "10px",marginBottom: "10px", width: "45%" }}
         />
         <input
-          type="text"
-          placeholder="Last Name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          style={{ marginRight: "10px", width: "45%" }}
+            type="text"
+            placeholder="Last Name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            style={{ marginRight: "10px",marginBottom: "10px", width: "45%" }}
+        />
+        <input
+            type="text"
+            placeholder="Street Number"
+            value={streetNumber}
+            onChange={(e) => setStreetNumber(e.target.value)}
+            style={{ marginBottom: "10px", display: "block", width: "100%" }}
+        />
+        <input
+            type="text"
+            placeholder="Street Name"
+            value={streetName}
+            onChange={(e) => setStreetName(e.target.value)}
+            style={{ marginBottom: "10px", display: "block", width: "100%" }}
+        />
+        <input
+            type="text"
+            placeholder="City"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            style={{ marginBottom: "10px", display: "block", width: "100%" }}
+        />
+        <input
+            type="text"
+            placeholder="State"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            style={{ marginBottom: "10px", display: "block", width: "100%" }}
+        />
+        <input
+            type="text"
+            placeholder="Zip"
+            value={zip}
+            onChange={(e) => setZip(e.target.value)}
+            style={{ marginBottom: "10px", display: "block", width: "100%" }}
         />
         <button onClick={createCustomer} disabled={loading}>
-          {loading ? "Creating..." : "Create Customer"}
+            {loading ? "Creating..." : "Create Customer"}
         </button>
-      </section>
+        </section>
 
       <section style={{ marginBottom: "20px" }}>
         <h2>Create Account</h2>
