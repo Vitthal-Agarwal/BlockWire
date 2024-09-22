@@ -5,7 +5,7 @@ const axios = require("axios");
 
 const router = express.Router();
 const apiKey = process.env.API_KEY;
-const baseUrl = `http://api.nessieisreal.com`;
+const baseUrl = 'http://api.nessieisreal.com';
 
 // Import Hedera functions
 const { createHederaAccount, transferHbar } = require('./hedera');
@@ -13,6 +13,7 @@ const { createHederaAccount, transferHbar } = require('./hedera');
 // In-memory data storage for demonstration purposes
 const customers = [];
 const accounts = [];
+const transactions = []; // Added to store transactions
 
 // Create a new customer
 router.post('/create-customer', async (req, res) => {
@@ -134,6 +135,7 @@ router.post('/create-account', async (req, res) => {
 });
 
 // Transfer money between accounts
+// Transfer money between accounts
 router.post('/transfer-money', async (req, res) => {
   const { senderAccountId, recipientAccountId, amount } = req.body;
 
@@ -142,8 +144,7 @@ router.post('/transfer-money', async (req, res) => {
     return res.status(400).json({ error: "Invalid input. Please provide valid senderAccountId, recipientAccountId, and a positive amount." });
   }
 
-  // Define the transfer date in the required format (e.g., "2024-09-22")
-  const transactionDate = new Date().toISOString().split('T')[0];  // Gets today's date in YYYY-MM-DD format
+  const transactionDate = new Date().toISOString().split('T')[0];
 
   const transferUrl = `${baseUrl}/accounts/${senderAccountId}/transfers?key=${apiKey}`;
   const accountUrl = `${baseUrl}/accounts/${senderAccountId}?key=${apiKey}`;
@@ -158,20 +159,50 @@ router.post('/transfer-money', async (req, res) => {
       return res.status(400).json({ error: "Insufficient funds" });
     }
 
-    // Step 3: Proceed with transfer if enough funds are available
+    // Step 3: Prepare transfer data with status "pending"
     const transferData = {
       "medium": "balance",
       "payee_id": recipientAccountId,
       "amount": amount,
-      "transaction_date": transactionDate,  // Add the transaction date
-      "status": "pending",  // Set status as "pending" by default
+      "transaction_date": transactionDate,
+      "status": "pending",
       "description": "Transfer to recipient"
     };
 
+    // Step 4: Send transaction data to AI model for fraud detection
+    // Get previous transactions for the sender (from in-memory data)
+    const senderTransactions = transactions.filter(tx => tx.senderAccountId === senderAccountId);
+
+    // Prepare data to send to AI model
+    const aiRequestData = {
+      new_transaction: {
+        senderAccountId,
+        recipientAccountId,
+        amount,
+        transaction_date: transactionDate,
+        description: "Transfer to recipient"
+      },
+      transactions: senderTransactions
+    };
+
+    // Call the AI model
+    const aiResponse = await axios.post('http://localhost:5000/eval_transaction', aiRequestData);
+
+    const { isSuspicious, reason } = aiResponse.data;
+
+    if (isSuspicious) {
+      // If transaction is suspicious, update status to "cancelled" and return response
+      transferData.status = "cancelled";
+      transferData.reason = reason;
+      return res.status(400).json({ error: "Transaction cancelled due to suspicion", reason });
+    }
+
+    // If not suspicious, proceed with transfer via Capital One API
+    transferData.status = "completed";
     const response = await axios.post(transferUrl, transferData);
     console.log("Transfer API Response:", response.data);
 
-    // Step 4: Perform the transfer on Hedera blockchain
+    // Step 5: Perform the transfer on Hedera blockchain
     const senderAccount = accounts.find(acc => acc.accountId === senderAccountId);
     const recipientAccount = accounts.find(acc => acc.accountId === recipientAccountId);
 
@@ -188,14 +219,26 @@ router.post('/transfer-money', async (req, res) => {
 
     console.log("Hedera Transfer Status:", hederaStatus);
 
-    // Update balances in the in-memory data (for demonstration)
+    // Update balances in the in-memory data
     senderAccount.balance -= amount;
     recipientAccount.balance += amount;
 
-    res.json({ message: "Transfer successful", transaction: response.data, hederaStatus });
+    // Store the transaction in the in-memory transactions array
+    const transactionRecord = {
+      senderAccountId,
+      recipientAccountId,
+      amount,
+      transactionDate,
+      description: "Transfer to recipient",
+      status: "completed"
+    };
+    transactions.push(transactionRecord);
+
+    // **Ensure the status code is 200 on success**
+    res.status(200).json({ message: "Transfer successful", transaction: response.data, hederaStatus });
+
   } catch (error) {
     console.error("Error transferring money:", error.response ? error.response.data : error.message);
-    res.status(500).json({ error: "Error transferring money" });
   }
 });
 

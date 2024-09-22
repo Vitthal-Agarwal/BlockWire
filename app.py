@@ -3,15 +3,14 @@ from typing import Dict
 
 from flask import Flask, request, jsonify
 from langchain_cerebras import ChatCerebras
-from pymongo import MongoClient
 
 # Flask App
 app = Flask(__name__)
 
 # Create LLM object for Cerebras
 llm = ChatCerebras(
-    model="llama3.1-8b",  # Two options: llama3.1-8b and llama3.1-70b
-    api_key="your_api_key_here",  # Your API key
+    model="llama3.1-8b",  # Two options: 'llama3.1-8b' and 'llama3.1-70b'
+    api_key="csk-4dnhwkecn262m9tpk985kp5vtfv4455426ykvdp56ncdcctf",  # Replace with your actual API key
     model_kwargs={
         "response_format": {"type": "json_object"}
     },  # Always return only JSON objects
@@ -22,33 +21,18 @@ llm.bind(
     stream=False,  # Not compatible with JSON-only option according to docs
 )
 
-# Establish connection with MongoDB
-client = MongoClient("mongodb+srv://vitthalagarwal:vitthal914@cluster0.g7rnb.mongodb.net/")
-db = client["test"]
-transactions_collection = db["transactions"]
 
-# Receives a new transaction, retrieves previous transactions and passes to Cerebras API for fraud detection
-@app.route("/eval_transaction", methods=['POST'])
+# Receives a new transaction and previous transactions, passes to Cerebras API for fraud detection
+@app.route("/eval_transaction", methods=["POST"])
 def eval_transaction():
-    new_transaction = request.get_json()
+    data = request.get_json()
+    new_transaction = data.get("new_transaction")
+    transactions = data.get("transactions")
 
-    user_id = new_transaction.get('senderAccountId')  # Assuming we use senderAccountId as user ID
+    if new_transaction is None or transactions is None:
+        return jsonify({"error": "new_transaction and transactions are required"}), 400
 
-    # Find previous transactions of given user
-    transactions = list(
-        transactions_collection.find({"senderAccountId": user_id})
-        .sort("transactionDate", -1)
-        .limit(100)
-    )
-    transactions = (
-        "No previous transactions."
-        if not transactions
-        else [t for t in transactions]
-    )
-
-    prompt = create_json_prompt(
-        transactions, new_transaction
-    )  # Create prompt based on current transaction
+    prompt = create_json_prompt(transactions, new_transaction)
 
     max_retries = 5  # Limit for valid JSON responses from calling Cerebras API
     valid_response = False
@@ -75,20 +59,21 @@ def eval_transaction():
     if not valid_response:
         # No valid response received (Likely causes are API down or harmful words inside description)
         print("All attempts failed, flagging as suspicious")
-        isSuspicious = True
+        is_suspicious = True
         reason = "AI model did not provide a valid response."
     else:
         # Valid response received, extract isSuspicious and reason
-        isSuspicious = json_response["isSuspicious"]
+        is_suspicious = json_response["isSuspicious"]
         reason = json_response.get("reason", "")
 
     # Send back isSuspicious and reason
     response_data = {
-        "isSuspicious": isSuspicious,
+        "isSuspicious": is_suspicious,
         "reason": reason,
     }
 
     return jsonify(response_data)
+
 
 def create_json_prompt(transactions: list, latest_transaction: Dict):
     prompt = f"""You are an AI designed to analyze financial transactions and determine if they are suspicious.
@@ -111,5 +96,6 @@ Answer:
 """
     return prompt
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(port=5000)
