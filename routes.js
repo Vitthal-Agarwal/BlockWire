@@ -1,122 +1,128 @@
+require("dotenv").config();
+
 const express = require('express');
 const axios = require("axios");
-const hederaLogger = require("./hedera");
 
-const router = express.Router();
+const router = express.Router(); // Router for handling routes
 
 const apiKey = process.env.API_KEY;
 const baseUrl = `http://api.nessieisreal.com`;
 
-// Create a new customer using Capital One API
+// Create a new customer
 router.post('/create-customer', async (req, res) => {
-    const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
-
-    // Capture customer data sent from the frontend
-    const customerData = {
-        "first_name": req.body.first_name,  // <-- Dynamic first name
-        "last_name": req.body.last_name,    // <-- Dynamic last name
-        "address": {
-            "street_number": "123",         // Placeholder data
-            "street_name": "Main St",       // Placeholder data
-            "city": "Somewhere",
-            "state": "CA",
-            "zip": "12345"
-        }
-    };
-
-    try {
-        // Send the dynamic data to the Capital One API
-        const response = await axios.post(customerUrl, customerData);
-        console.log("Customer API Response:", response.data);
-        const customerId = response.data.objectCreated._id;
-        res.json({ customerId });
-    } catch (error) {
-        console.error("Error creating customer:", error.response ? error.response.data : error.message);
-        res.status(500).json({ error: error.response ? error.response.data : error.message });
+  const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
+  const customerData = {
+    "first_name": req.body.first_name,
+    "last_name": req.body.last_name,
+    "address": {
+      "street_number": "123",
+      "street_name": "Main St",
+      "city": "Somewhere",
+      "state": "CA",
+      "zip": "12345"
     }
-});
-
-// Create an account for a customer using the Capital One API
-router.post('/create-account', async (req, res) => {
-  const { customerId, accountType, nickname, balance, rewards } = req.body;
-  const accountUrl = `${baseUrl}/customers/${customerId}/accounts?key=${apiKey}`;
-
-  const accountData = {
-      type: accountType,
-      nickname: nickname,
-      rewards: rewards,
-      balance: balance
   };
 
   try {
-      const response = await axios.post(accountUrl, accountData);
-      const accountId = response.data.objectCreated._id;
-
-      // Log the account creation on the Hedera blockchain
-      await hederaLogger.logAccountCreation(accountId);
-
-      res.json({ accountId });
+    const response = await axios.post(customerUrl, customerData);
+    console.log("Customer API Response:", response.data); // Log response
+    const customerId = response.data.objectCreated._id;
+    res.json({ customerId });
   } catch (error) {
-      console.error("Error creating account:", error.response ? error.response.data : error.message);
-      res.status(500).json({ error: "Error creating account" });
+    console.error("Error creating customer:", error.response ? error.response.data : error.message); // Log error
+    res.status(500).json({ error: "Error creating customer" });
   }
 });
 
-// Transfer money between accounts using the Capital One API
+// Create an account for a customer
+router.post('/create-account', async (req, res) => {
+  const { customerId } = req.body;
+  const accountUrl = `${baseUrl}/customers/${customerId}/accounts?key=${apiKey}`;
+  const accountData = {
+    "type": "Savings",
+    "nickname": req.body.nickname || "Savings Account",
+    "rewards": 100,
+    "balance": 1000
+  };
+
+  try {
+    const response = await axios.post(accountUrl, accountData);
+    console.log("Account API Response:", response.data); // Log response
+    const accountId = response.data.objectCreated._id;
+    res.json({ accountId });
+  } catch (error) {
+    console.error("Error creating account:", error.response ? error.response.data : error.message); // Log error
+    res.status(500).json({ error: "Error creating account" });
+  }
+});
+
+// Transfer money between accounts
 router.post('/transfer-money', async (req, res) => {
-    const { senderAccountId, recipientAccountId, amount } = req.body;
-    const senderUrl = `${baseUrl}/accounts/${senderAccountId}?key=${apiKey}`;
-    const recipientUrl = `${baseUrl}/accounts/${recipientAccountId}?key=${apiKey}`;
+  const { senderAccountId, recipientAccountId, amount } = req.body;
 
-    try {
-        // Fetch balances to ensure validity
-        const senderResponse = await axios.get(senderUrl);
-        const recipientResponse = await axios.get(recipientUrl);
-        const senderBalance = senderResponse.data.balance;
+  // Validate input
+  if (!senderAccountId || !recipientAccountId || !amount || amount <= 0) {
+    return res.status(400).json({ error: "Invalid input. Please provide valid senderAccountId, recipientAccountId, and a positive amount." });
+  }
 
-        if (senderBalance < amount) {
-            return res.status(400).json({ error: "Insufficient funds" });
-        }
+  const transferUrl = `${baseUrl}/accounts/${senderAccountId}/transfers?key=${apiKey}`;
+  const accountUrl = `${baseUrl}/accounts/${senderAccountId}?key=${apiKey}`; // Endpoint to get account details
 
-        // Update balances
-        await axios.put(senderUrl, { balance: senderBalance - amount });
-        await axios.put(recipientUrl, { balance: recipientResponse.data.balance + amount });
+  try {
+    // Step 1: Fetch sender's account balance
+    const accountResponse = await axios.get(accountUrl);
+    const senderBalance = accountResponse.data.balance;
 
-        // Log the transaction on the blockchain
-        await hederaLogger.logTransaction(senderAccountId, recipientAccountId, amount);
-
-        res.json({ message: "Transfer successful" });
-    } catch (error) {
-        console.error("Error transferring money:", error.response ? error.response.data : error.message);
-        res.status(500).json({ error: "Error transferring money" });
+    // Step 2: Check if sender has enough funds
+    if (senderBalance < amount) {
+      return res.status(400).json({ error: "Insufficient funds" });
     }
+
+    // Step 3: Proceed with transfer if enough funds are available
+    const transferData = {
+      "medium": "balance",
+      "payee_id": recipientAccountId,
+      "amount": amount,
+      "description": "Transfer to recipient"
+    };
+
+    const response = await axios.post(transferUrl, transferData);
+    console.log("Transfer API Response:", response.data); // Log response
+
+    res.json({ message: "Transfer successful", transaction: response.data });
+  } catch (error) {
+    console.error("Error transferring money:", error.response ? error.response.data : error.message);
+    res.status(500).json({ error: "Error transferring money" });
+  }
 });
 
-// Fetch transaction history for an account using Capital One API
+// Fetch transactions for an account
 router.get('/transactions/:accountId', async (req, res) => {
-    const accountId = req.params.accountId;
-    const transactionUrl = `${baseUrl}/accounts/${accountId}/transfers?key=${apiKey}`;
+  const { accountId } = req.params;
+  const transactionUrl = `${baseUrl}/accounts/${accountId}/transfers?key=${apiKey}`;
 
-    try {
-        const response = await axios.get(transactionUrl);
-        res.json(response.data);
-    } catch (error) {
-        console.error("Error fetching transactions:", error.response ? error.response.data : error.message);
-        res.status(500).json({ error: "Error fetching transactions" });
-    }
+  try {
+    const response = await axios.get(transactionUrl);
+    res.json({ transfers: response.data });
+  } catch (error) {
+    console.error("Error fetching transactions:", error.response ? error.response.data : error.message);
+    res.status(500).json({ error: "Error fetching transactions" });
+  }
 });
 
-// Fetch all customers
-router.get('/customers', async (req, res) => {
-    const customerUrl = `${baseUrl}/customers?key=${apiKey}`;
+// Check account balance
+router.get('/balance/:accountId', async (req, res) => {
+  const { accountId } = req.params;
+  const balanceUrl = `${baseUrl}/accounts/${accountId}?key=${apiKey}`;
 
-    try {
-        const response = await axios.get(customerUrl);
-        res.json(response.data);
-    } catch (error) {
-        console.error("Error fetching customers:", error.response ? error.response.data : error.message);
-        res.status(500).json({ error: "Error fetching customers" });
-    }
+  try {
+    const response = await axios.get(balanceUrl);
+    const balance = response.data.balance;
+    res.json({ accountId, balance });
+  } catch (error) {
+    console.error("Error fetching balance:", error.response ? error.response.data : error.message);
+    res.status(500).json({ error: "Error fetching balance" });
+  }
 });
 
 module.exports = router;
