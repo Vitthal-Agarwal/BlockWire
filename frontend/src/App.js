@@ -4,30 +4,30 @@ import axios from "axios";
 function App() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [streetNumber, setStreetNumber] = useState(""); // New state for street number
-  const [streetName, setStreetName] = useState("");     // New state for street name
-  const [city, setCity] = useState("");                 // New state for city
-  const [state, setState] = useState("");               // New state for state
-  const [zip, setZip] = useState("");                   // New state for zip code
+  const [streetNumber, setStreetNumber] = useState("");
+  const [streetName, setStreetName] = useState("");
+  const [city, setCity] = useState("");
+  const [stateAddr, setStateAddr] = useState("");
+  const [zip, setZip] = useState("");
 
   const [customerId, setCustomerId] = useState("");
   const [accountId, setAccountId] = useState("");
   const [recipientAccountId, setRecipientAccountId] = useState("");
-  const [transferAmount, setTransferAmount] = useState(""); // Fixed reference here
+  const [transferAmount, setTransferAmount] = useState("");
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+
   // Additional states for account creation
-  const [type, setType] = useState(""); 
-  const [nickname, setNickname] = useState(""); 
-  const [balanceInput, setBalanceInput] = useState(""); 
-  const [rewards, setRewards] = useState(""); 
+  const [type, setType] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [balanceInput, setBalanceInput] = useState("");
+  const [rewards, setRewards] = useState("");
 
   // Create a new customer
   const createCustomer = async () => {
-    if (!firstName || !lastName || !streetNumber || !streetName || !city || !state || !zip) {
+    if (!firstName || !lastName || !streetNumber || !streetName || !city || !stateAddr || !zip) {
       alert("Please enter all required fields.");
       return;
     }
@@ -40,7 +40,7 @@ function App() {
         street_number: streetNumber,
         street_name: streetName,
         city: city,
-        state: state,
+        state: stateAddr,
         zip: zip,
       });
       setCustomerId(response.data.customerId);
@@ -61,14 +61,14 @@ function App() {
     }
     setLoading(true);
     setError("");
-    
+
     try {
       const response = await axios.post("http://localhost:3000/create-account", {
         customerId,
         type,
         nickname,
         balance: balanceInput,
-        rewards
+        rewards,
       });
       setAccountId(response.data.accountId);
       alert("Account created successfully.");
@@ -79,7 +79,7 @@ function App() {
     }
     setLoading(false);
   };
-  
+
   // Transfer money to the recipient
   const transferMoney = async () => {
     if (!accountId || !recipientAccountId || !transferAmount || transferAmount <= 0) {
@@ -104,16 +104,16 @@ function App() {
     setLoading(false);
   };
 
-  // Fetch transactions for the recipient account
+  // Fetch transactions for the account
   const fetchTransactions = async () => {
-    if (!recipientAccountId) {
-      alert("Recipient Account ID is required to fetch transactions.");
+    if (!accountId) {
+      alert("Account ID is required to fetch transactions.");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const response = await axios.get(`http://localhost:3000/transactions/${recipientAccountId}`);
+      const response = await axios.get(`http://localhost:3000/transactions/${accountId}`);
       setTransactions(response.data.transfers || []);
     } catch (error) {
       console.error("Error fetching transactions:", error.response ? error.response.data : error.message);
@@ -148,62 +148,64 @@ function App() {
 
       <section style={{ marginBottom: "20px" }}>
         <h2>Create Customer</h2>
+        {/* Customer input fields */}
         <input
-            type="text"
-            placeholder="First Name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            style={{ marginRight: "10px",marginBottom: "10px", width: "45%" }}
+          type="text"
+          placeholder="First Name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          style={{ marginRight: "10px", marginBottom: "10px", width: "45%" }}
         />
         <input
-            type="text"
-            placeholder="Last Name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            style={{ marginRight: "10px",marginBottom: "10px", width: "45%" }}
+          type="text"
+          placeholder="Last Name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          style={{ marginRight: "10px", marginBottom: "10px", width: "45%" }}
         />
         <input
-            type="text"
-            placeholder="Street Number"
-            value={streetNumber}
-            onChange={(e) => setStreetNumber(e.target.value)}
-            style={{ marginBottom: "10px", display: "block", width: "100%" }}
+          type="text"
+          placeholder="Street Number"
+          value={streetNumber}
+          onChange={(e) => setStreetNumber(e.target.value)}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
         />
         <input
-            type="text"
-            placeholder="Street Name"
-            value={streetName}
-            onChange={(e) => setStreetName(e.target.value)}
-            style={{ marginBottom: "10px", display: "block", width: "100%" }}
+          type="text"
+          placeholder="Street Name"
+          value={streetName}
+          onChange={(e) => setStreetName(e.target.value)}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
         />
         <input
-            type="text"
-            placeholder="City"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            style={{ marginBottom: "10px", display: "block", width: "100%" }}
+          type="text"
+          placeholder="City"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
         />
         <input
-            type="text"
-            placeholder="State"
-            value={state}
-            onChange={(e) => setState(e.target.value)}
-            style={{ marginBottom: "10px", display: "block", width: "100%" }}
+          type="text"
+          placeholder="State"
+          value={stateAddr}
+          onChange={(e) => setStateAddr(e.target.value)}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
         />
         <input
-            type="text"
-            placeholder="Zip"
-            value={zip}
-            onChange={(e) => setZip(e.target.value)}
-            style={{ marginBottom: "10px", display: "block", width: "100%" }}
+          type="text"
+          placeholder="Zip"
+          value={zip}
+          onChange={(e) => setZip(e.target.value)}
+          style={{ marginBottom: "10px", display: "block", width: "100%" }}
         />
         <button onClick={createCustomer} disabled={loading}>
-            {loading ? "Creating..." : "Create Customer"}
+          {loading ? "Creating..." : "Create Customer"}
         </button>
-        </section>
+      </section>
 
       <section style={{ marginBottom: "20px" }}>
         <h2>Create Account</h2>
+        {/* Account input fields */}
         <input
           type="text"
           placeholder="Customer ID"
@@ -246,6 +248,7 @@ function App() {
 
       <section style={{ marginBottom: "20px" }}>
         <h2>Transfer Money</h2>
+        {/* Transfer input fields */}
         <input
           type="text"
           placeholder="Sender Account ID"
@@ -274,11 +277,12 @@ function App() {
 
       <section style={{ marginBottom: "20px" }}>
         <h2>Transaction History</h2>
+        {/* Transaction history input and display */}
         <input
           type="text"
-          placeholder="Recipient Account ID"
-          value={recipientAccountId}
-          onChange={(e) => setRecipientAccountId(e.target.value)}
+          placeholder="Account ID"
+          value={accountId}
+          onChange={(e) => setAccountId(e.target.value)}
           style={{ marginBottom: "10px", display: "block", width: "100%" }}
         />
         <button onClick={fetchTransactions} disabled={loading}>
@@ -297,6 +301,7 @@ function App() {
 
       <section style={{ marginBottom: "20px" }}>
         <h2>Check Account Balance</h2>
+        {/* Balance input and display */}
         <input
           type="text"
           placeholder="Account ID"
