@@ -97,39 +97,48 @@ router.post('/create-account', async (req, res) => {
 
 // Transfer money between accounts
 router.post('/transfer-money', async (req, res) => {
-  const { senderAccountId, recipientAccountId, amount } = req.body;
-
-  if (!senderAccountId || !recipientAccountId || !amount || amount <= 0) {
-    return res.status(400).json({ error: "Invalid input. Please provide valid senderAccountId, recipientAccountId, and a positive amount." });
-  }
-
-  const transferUrl = `${baseUrl}/accounts/${senderAccountId}/transfers?key=${apiKey}`;
-  const accountUrl = `${baseUrl}/accounts/${senderAccountId}?key=${apiKey}`;
-
-  try {
-    const accountResponse = await axios.get(accountUrl);
-    const senderBalance = accountResponse.data.balance;
-
-    if (senderBalance < amount) {
-      return res.status(400).json({ error: "Insufficient funds" });
+    const { senderAccountId, recipientAccountId, amount } = req.body;
+  
+    // Validate input
+    if (!senderAccountId || !recipientAccountId || !amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid input. Please provide valid senderAccountId, recipientAccountId, and a positive amount." });
     }
-
-    const transferData = {
-      "medium": "balance",
-      "payee_id": recipientAccountId,
-      "amount": amount,
-      "description": "Transfer to recipient"
-    };
-
-    const response = await axios.post(transferUrl, transferData);
-    console.log("Transfer API Response:", response.data);
-
-    res.json({ message: "Transfer successful", transaction: response.data });
-  } catch (error) {
-    console.error("Error transferring money:", error.response ? error.response.data : error.message);
-    res.status(500).json({ error: "Error transferring money" });
-  }
-});
+  
+    // Define the transfer date in the required format (e.g., "2024-09-22")
+    const transactionDate = new Date().toISOString().split('T')[0];  // Gets today's date in YYYY-MM-DD format
+  
+    const transferUrl = `${baseUrl}/accounts/${senderAccountId}/transfers?key=${apiKey}`;
+    const accountUrl = `${baseUrl}/accounts/${senderAccountId}?key=${apiKey}`;
+  
+    try {
+      // Step 1: Fetch sender's account balance
+      const accountResponse = await axios.get(accountUrl);
+      const senderBalance = accountResponse.data.balance;
+  
+      // Step 2: Check if sender has enough funds
+      if (senderBalance < amount) {
+        return res.status(400).json({ error: "Insufficient funds" });
+      }
+  
+      // Step 3: Proceed with transfer if enough funds are available
+      const transferData = {
+        "medium": "balance",
+        "payee_id": recipientAccountId,
+        "amount": amount,
+        "transaction_date": transactionDate,  // Add the transaction date
+        "status": "pending",  // Set status as "pending" by default
+        "description": "Transfer to recipient"
+      };
+  
+      const response = await axios.post(transferUrl, transferData);
+      console.log("Transfer API Response:", response.data);  // Log response
+  
+      res.json({ message: "Transfer successful", transaction: response.data });
+    } catch (error) {
+      console.error("Error transferring money:", error.response ? error.response.data : error.message);
+      res.status(500).json({ error: "Error transferring money" });
+    }
+  });
 
 // Fetch transactions for an account
 router.get('/transactions/:accountId', async (req, res) => {
