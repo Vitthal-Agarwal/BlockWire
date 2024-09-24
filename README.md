@@ -1,4 +1,4 @@
-# <img src="./images/pennapps-logo.png" width="47" height="47" alt="PennApps logo" style="vertical-align: middle;" /> PennApps XXV - BlockWire
+# <img src="./pennapps-logo.png" width="47" height="47" alt="PennApps logo" style="vertical-align: middle;" /> PennApps XXV - BlockWire
 
 ## Team Members:
  - **Chirag Seth**
