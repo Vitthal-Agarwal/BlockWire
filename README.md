@@ -1,10 +1,10 @@
 # <img src="./pennapps-logo.png" width="47" height="47" alt="PennApps logo" style="vertical-align: middle;" /> PennApps XXV - BlockWire
 
 ## Team Members:
+ - **Vitthal Agarwal**
  - **Chirag Seth**
  - **Hanson Siu**
  - **Satwik Mallajosyula**
- - **Vitthal Agarwal**
 
 **Devpost**: [BlockWire on Devpost](https://devpost.com/software/blockwire)
 
